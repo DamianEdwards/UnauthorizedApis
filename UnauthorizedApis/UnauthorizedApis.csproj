@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <UserSecretsId>aspnet-UnauthorizedApis-1A04A5D6-EA6D-4F89-9C1E-3C370F52B120</UserSecretsId>
+    <RestoreSources>
+      $(RestoreSources);
+      https://api.nuget.org/v3/index.json;
+      https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet6/nuget/v3/index.json
+    </RestoreSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.0-preview.5.21264.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.0-preview.5.21264.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.0-preview.5.21264.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.0-preview.5.21263.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.0-preview.5.21263.2" />
+  </ItemGroup>
+
+</Project>
