@@ -109,8 +109,6 @@ namespace UnauthorizedApis
         private static bool IsApiControllerEndpoint(HttpContext httpContext)
         {
             var endpoint = httpContext.GetEndpoint();
-
-            // TODO: Need to verify the correct metadata to look for here
             var isApiController = endpoint.Metadata.GetMetadata<ApiControllerAttribute>() != null;
 
             return isApiController;
@@ -118,7 +116,6 @@ namespace UnauthorizedApis
 
         private static async Task FormatProblemDetailsResponse(HttpContext httpContext)
         {
-            // TODO: Populate response body with problem details response
             var problem = new ProblemDetails
             {
                 Status = httpContext.Response.StatusCode
@@ -140,24 +137,22 @@ namespace UnauthorizedApis
 
     public class MinimalApisAuthorizationRedirectBehavior : ICanChangeAuthorizationRedirectBehavior
     {
-        public Task OnRedirectToLogin(RedirectContext<CookieAuthenticationOptions> context)
+        public async Task OnRedirectToLogin(RedirectContext<CookieAuthenticationOptions> context)
         {
             if (IsApiEndpoint(context.HttpContext))
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await FormatProblemDetailsResponse(context.HttpContext);
             }
-
-            return Task.CompletedTask;
         }
 
-        public Task OnRedirectToAccessDenied(RedirectContext<CookieAuthenticationOptions> context)
+        public async Task OnRedirectToAccessDenied(RedirectContext<CookieAuthenticationOptions> context)
         {
             if (IsApiEndpoint(context.HttpContext))
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await FormatProblemDetailsResponse(context.HttpContext);
             }
-
-            return Task.CompletedTask;
         }
 
         private static bool IsApiEndpoint(HttpContext httpContext)
@@ -167,9 +162,36 @@ namespace UnauthorizedApis
 
             return isApiController;
         }
+
+        private static async Task FormatProblemDetailsResponse(HttpContext httpContext)
+        {
+            switch (httpContext.Response.StatusCode)
+            {
+                case StatusCodes.Status401Unauthorized:
+                    await httpContext.Response.WriteAsJsonAsync(new
+                    {
+                        Status = httpContext.Response.StatusCode,
+                        Title = "Unauthorized"
+                    });
+                    break;
+
+                case StatusCodes.Status403Forbidden:
+                    await httpContext.Response.WriteAsJsonAsync(new
+                    {
+                        Status = httpContext.Response.StatusCode,
+                        Title = "Forbidden"
+                    });
+                    break;
+            }
+        }
     }
 
     public class MinimalApiEndpointMetadata
     {
+    }
+
+    public interface IPreferJsonResponses
+    {
+
     }
 }
