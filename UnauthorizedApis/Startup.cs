@@ -65,7 +65,7 @@ namespace UnauthorizedApis
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapGet("/apis/simple", (Func<string>)(() => "Shh, it's a secret!"))
+                endpoints.MapGet("/api/simple", (Func<string>)(() => "Shh, it's a secret!"))
                          .RequireAuthorization()
                          .FixApiMetadata();
                 endpoints.MapRazorPages();

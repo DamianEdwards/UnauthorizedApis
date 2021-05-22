@@ -35,7 +35,7 @@ namespace UnauthorizedApis
         }
     }
 
-    public class ConfigureCookieAuthenticationOptions : IConfigureOptions<CookieAuthenticationOptions>
+    public class ConfigureCookieAuthenticationOptions : IConfigureOptions<CookieAuthenticationOptions>, IConfigureNamedOptions<CookieAuthenticationOptions>
     {
         private readonly IEnumerable<ICanChangeAuthorizationRedirectBehavior> _redirectBehaviors;
 
@@ -72,6 +72,11 @@ namespace UnauthorizedApis
                     }
                 }
             };
+        }
+
+        public void Configure(string name, CookieAuthenticationOptions options)
+        {
+            Configure(options);
         }
     }
 
