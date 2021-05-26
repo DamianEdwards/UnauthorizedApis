@@ -17,5 +17,12 @@ namespace UnauthorizedApis.Controllers
         {
             return new[] { 1, 2, 3 };
         }
+
+        [HttpGet("problem")]
+        [AllowAnonymous]
+        public ActionResult GetProblem()
+        {
+            return Problem();
+        }
     }
 }

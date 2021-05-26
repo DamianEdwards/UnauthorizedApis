@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -30,7 +32,8 @@ namespace UnauthorizedApis
 
         public static IEndpointConventionBuilder FixApiMetadata(this IEndpointConventionBuilder builder)
         {
-            builder.WithMetadata(new MinimalApiEndpointMetadata());
+            builder
+                .WithMetadata(new MinimalApiEndpointMetadata());
             return builder;
         }
     }
@@ -41,13 +44,11 @@ namespace UnauthorizedApis
 
         public ConfigureCookieAuthenticationOptions(IEnumerable<ICanChangeAuthorizationRedirectBehavior> redirectBehaviors)
         {
-            // This gets called
             _redirectBehaviors = redirectBehaviors;
         }
 
         public void Configure(CookieAuthenticationOptions options)
         {
-            // But this doesn't?!?!
             options.Events = new CookieAuthenticationEvents
             {
                 OnRedirectToLogin = async (ctx) =>
@@ -125,9 +126,11 @@ namespace UnauthorizedApis
             {
                 case StatusCodes.Status401Unauthorized:
                     problem.Title = "Unauthorized";
+                    problem.Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1";
                     break;
                 case StatusCodes.Status403Forbidden:
                     problem.Title = "Forbidden";
+                    problem.Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3";
                     break;
             }
 
@@ -171,7 +174,8 @@ namespace UnauthorizedApis
                     await httpContext.Response.WriteAsJsonAsync(new
                     {
                         Status = httpContext.Response.StatusCode,
-                        Title = "Unauthorized"
+                        Title = "Unauthorized",
+                        Type = "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
                     });
                     break;
 
@@ -179,14 +183,15 @@ namespace UnauthorizedApis
                     await httpContext.Response.WriteAsJsonAsync(new
                     {
                         Status = httpContext.Response.StatusCode,
-                        Title = "Forbidden"
+                        Title = "Forbidden",
+                        Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3"
                     });
                     break;
             }
         }
     }
 
-    public class MinimalApiEndpointMetadata
+    public class MinimalApiEndpointMetadata : IPreferNoRedirects
     {
     }
 
@@ -194,4 +199,54 @@ namespace UnauthorizedApis
     {
 
     }
+
+    public interface IPreferNoRedirects
+    {
+
+    }
+
+    public class MvcDeveloperPageExceptionFilter : IDeveloperPageExceptionFilter
+    {
+        public async Task HandleExceptionAsync(ErrorContext errorContext, Func<ErrorContext, Task> next)
+        {
+            var httpContext = errorContext.HttpContext;
+            if (IsApiControllerEndpoint(httpContext))
+            {
+                httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await FormatProblemDetailsResponse(httpContext, errorContext.Exception);
+            }
+            else
+            {
+                await next(errorContext);
+            }
+        }
+
+        private static bool IsApiControllerEndpoint(HttpContext httpContext)
+        {
+            if (httpContext.Request.Query.Keys.Contains("forcehtml"))
+            {
+                return false;
+            }
+
+            var endpoint = httpContext.GetEndpoint();
+            var isApiController = endpoint?.Metadata.GetMetadata<ApiControllerAttribute>() != null;
+
+            return isApiController;
+        }
+
+        private static async Task FormatProblemDetailsResponse(HttpContext httpContext, Exception exception)
+        {
+            var problem = new ProblemDetails
+            {
+                Type = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
+                Title = "An unhandled exception occurred while processing the request",
+                Status = httpContext.Response.StatusCode,
+                Detail = exception.ToString()
+            };
+            problem.Extensions.Add("traceId", Activity.Current?.Id ?? httpContext.TraceIdentifier);
+
+            await httpContext.Response.WriteAsJsonAsync(problem);
+        }
+    }
+
 }
